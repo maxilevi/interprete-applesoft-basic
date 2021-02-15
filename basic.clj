@@ -677,7 +677,7 @@
 	(contains? 
 		(set [
 			'EXIT, 'ENV, 'DATA, 'CLEAR, 'LIST, 'LET, 'AND, 'OR, 'INT, 'SIN, 'ATN, 'LEN, 'ASC, 'RETURN, 'END, 'READ, 'RESTORE
-			'REM,'NEW, 'RUN, 'GOTO, 'IF, 'PRINT, 'INPUT, 'THEN, 'RETURN, 'FOR, 'NEXT, 'GOSUB, 'ON, 'SAVE, 'LOAD, 'LEN, 'STR$,
+			'REM,'NEW, 'RUN, 'GOTO, 'IF, 'PRINT, 'INPUT, 'THEN, 'RETURN, 'FOR, 'NEXT, 'GOSUB, 'ON, 'SAVE, 'LOAD, 'STR$,
 			'CHR$, 'MID$, 'AND, 'OR, 'TO, 'STEP, '?])
 		x
 	)
