@@ -1023,7 +1023,7 @@
 			(get d x)
 			(cond
 				(= x (symbol ".")) 0
-				(variable-string? x) ""
+				(variable-string? x) '""
 				(variable-integer? x) 0
 				(variable-float? x) 0
 				:else x
@@ -1137,23 +1137,33 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn precedencia [token]
 	(cond
+		(= token (symbol ",")) 0
 		(= token 'OR) 1
 		(= token 'AND) 2
 		(= token 'NOT) 3
-		(= token '=) 4
+		(= token '=) 3
 		(= token '<) 4
 		(= token '>) 4
 		(= token '<=) 4
 		(= token '>=) 4
-		(= token '<>) 4
+		(= token '<>) 3
 		(= token '+) 5
 		(= token '-) 5
 		(= token '*) 6
 		(= token '/) 6
 		(= token '-u) 7
+		(= token (symbol "^")) 8
+		(= token 'INT) 9
+		(= token 'SIN) 9
+		(= token 'LEN) 9
+		(= token 'ATN) 9
+		(= token 'ASC) 9
 		(= token 'MID$) 9
-		(= token (symbol "^")) 10
-		:else 11)
+		(= token 'MID3$) 9
+		(= token 'CHR$) 9
+		(= token 'STR$) 9
+		(palabra-reservada? token) 0
+		:else nil)
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1172,7 +1182,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn aridad [token]
 	(cond
-		(contains? (set ['ATN, 'INT, 'SIN, 'LEN]) token) 1
+		(contains? (set ['ATN, 'INT, 'SIN, 'LEN 'NOT 'CHR$ 'STR$ 'ASC, '-u]) token) 1
 		(contains? (set ['MID$, '*, '-, '+, '/, (symbol "^"), '=, '>=, '<=, '>, '<, '<>, 'AND, 'OR]) token) 2
 		(contains? (set ['MID3$]) token) 3
 		:else 0
