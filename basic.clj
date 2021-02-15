@@ -618,6 +618,11 @@
         (case operador
           -u (- operando)
           LEN (count operando)
+          NOT (not operando)
+          INT (int operando)
+          ATN (Math/atan operando)
+          SIN (Math/sin operando)
+          ASC (int (first operando))
           STR$ (if (not (number? operando)) (dar-error 163 nro-linea) (eliminar-cero-entero operando)) ; Type mismatch error
           CHR$ (if (or (< operando 0) (> operando 255)) (dar-error 53 nro-linea) (str (char operando)))))) ; Illegal quantity error
   ([operador operando1 operando2 nro-linea]
@@ -629,18 +634,26 @@
           = (if (and (string? operando1) (string? operando2))
                 (if (= operando1 operando2) 1 0)
                 (if (= (+ 0 operando1) (+ 0 operando2)) 1 0))
+          <> (- 1 (aplicar '= operando1 operando2 nro-linea))
+          <= (if (<= operando1 operando2) 1 0)
+          >= (if (>= operando1 operando2) 1 0)
+          > (if (> operando1 operando2) 1 0)
+          < (if (< operando1 operando2) 1 0)
           + (if (and (string? operando1) (string? operando2))
                 (str operando1 operando2)
                 (+ operando1 operando2))
+          - (- operando1 operando2)
+          * (* operando1 operando2)
           / (if (= operando2 0) (dar-error 133 nro-linea) (/ operando1 operando2))  ; Division by zero error
-          AND (let [op1 (+ 0 operando1), op2 (+ 0 operando2)] (if (and (not= op1 0) (not= op2 0)) 1 0))
+          OR (let [op1 (+ 0 operando1) op2 (+ 0 operando2)] (if (or (not= op1 0) (not= op2 0)) 1 0))
+          AND (let [op1 (+ 0 operando1) op2 (+ 0 operando2)] (if (and (not= op1 0) (not= op2 0)) 1 0))
           MID$ (if (< operando2 1)
                    (dar-error 53 nro-linea)  ; Illegal quantity error
                    (let [ini (dec operando2)] (if (>= ini (count operando1)) "" (subs operando1 ini))))))))
   ([operador operando1 operando2 operando3 nro-linea]
     (if (or (nil? operando1) (nil? operando2) (nil? operando3)) (dar-error 16 nro-linea)  ; Syntax error
         (case operador
-          MID3$ (let [tam (count operando1), ini (dec operando2), fin (+ (dec operando2) operando3)]
+          MID3$ (let [tam (count operando1) ini (dec operando2) fin (+ (dec operando2) operando3)]
                      (cond
                        (or (< operando2 1) (< operando3 0)) (dar-error 53 nro-linea)  ; Illegal quantity error
                        (>= ini tam) ""
@@ -682,7 +695,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn operador? [x]
 	(contains? 
-		(set ['+, '-, '*, '/, '=, '<, '>, '(<=), '(>=), '(<>), 'AND, 'OR, symbol "^"])
+		(set ['+, '-, '*, '/, '=, '<, '>, '(<=), '(>=), '(<>), 'AND, 'OR, symbol "^", 'INT, 'SIN, 'ATN, 'LEN, 'ASC, 'STR$,
+			'CHR$, 'MID$])
 		x
 	)
 )
