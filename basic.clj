@@ -662,7 +662,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn palabra-reservada? [x]
 	(contains? 
-		(set ['REM, 'NEW, 'RUN, 'GOTO, 'IF, 'PRINT, 'INPUT, 'THEN, 'RETURN, 'FOR, 'NEXT, 'GOSUB, 'ON, 'SAVE, 'LOAD, 'LEN, 'STR$, 'CHR$, 'MID$, 'AND, 'OR])
+		(set [
+			'EXIT, 'ENV, 'DATA, 'CLEAR, 'LIST, 'LET, 'AND, 'OR, 'INT, 'SIN, 'ATN, 'LEN, 'ASC, 'RETURN, 'END, 'READ, 'RESTORE
+			'REM,'NEW, 'RUN, 'GOTO, 'IF, 'PRINT, 'INPUT, 'THEN, 'RETURN, 'FOR, 'NEXT, 'GOSUB, 'ON, 'SAVE, 'LOAD, 'LEN, 'STR$,
+			'CHR$, 'MID$, 'AND, 'OR, 'TO, 'STEP, '?])
 		x
 	)
 )
@@ -679,7 +682,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn operador? [x]
 	(contains? 
-		(set ['+, '-, '*, '/, '=, '<, '>, '(<=), '(>=), '(<>), , symbol "^"])
+		(set ['+, '-, '*, '/, '=, '<, '>, '(<=), '(>=), '(<>), 'AND, 'OR, symbol "^"])
 		x
 	)
 )
@@ -692,7 +695,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn anular-invalidos [sentencia]
 	(map
-		#(if (or (operador? %1) (palabra-reservada? %1)) %1 nil)
+		#(if (contains? (set (map symbol ["&" "{" "!"])) %1) nil %1)
 		sentencia
 	)
 )
@@ -710,6 +713,9 @@
 ; [((10 (PRINT X)) (15 (X = X - 1)) (20 (X = 100))) [:ejecucion-inmediata 0] [] [] [] 0 {}]
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn cargar-linea [linea amb]
+	(let [d (into (sorted-map) (map #(vector (nth %1 0) (nth %1 1)) (nth amb 0)))]
+		(vec (concat (list (reverse (map #(reverse (into '() %1)) (into '() (assoc d (nth linea 0) (nth linea 1)))))) (rest amb)))
+	)
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -777,8 +783,12 @@
 ; user=> (variable-float? 'X$)
 ; false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn es-variable? [x]
+	(some? (re-matches #"^[A-Za-z]+[$|%]*$" (str x)))
+)
+
 (defn variable-float? [x]
-	(not (or (variable-integer? x) (variable-string? x)))
+	(and (es-variable? x) (not (or (variable-integer? x) (variable-string? x))))
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -792,7 +802,7 @@
 ; false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn variable-integer? [x]
-	(= (last (str x)) \%)
+	(and (es-variable? x) (= (last (str x)) \%))
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -806,7 +816,7 @@
 ; false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn variable-string? [x]
-	(= (last (str x)) \$)
+	(and (es-variable? x)(= (last (str x)) \$))
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -821,6 +831,11 @@
 ; 2
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn contar-sentencias [nro-linea amb]
+	(apply +
+		(map #(count (expandir-nexts (rest %1))) 
+		(filter
+			#(= (nth %1 0) nro-linea) 
+			(nth amb 0))))
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -856,9 +871,17 @@
 ; nil
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn buscar-lineas-restantes
-  ([amb] (buscar-lineas-restantes (amb 1) (amb 0)))
-  ([act prg]
-    )
+	([amb] (buscar-lineas-restantes (amb 1) (amb 0)))
+	([act prg]
+		(if
+		(not= (act 0) :ejecucion-inmediata)
+		(let [lineas-restantes (filter #(>= (nth %1 0) (act 0)) prg)]
+			(if 
+				(not (empty? lineas-restantes))
+				(let [head (nth lineas-restantes 0) statements (expandir-nexts (rest head))]
+					(concat (list (concat (take 1 head) (take-last (act 1) statements))) (rest lineas-restantes)))
+				nil))
+		nil))
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -884,7 +907,47 @@
 ; user=> (extraer-data (list '(10 (PRINT X) (REM ESTE NO) (DATA 30)) '(20 (DATA HOLA)) (list 100 (list 'DATA 'MUNDO (symbol ",") 10 (symbol ",") 20))))
 ; ("HOLA" "MUNDO" 10 20)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn castear-tipo-aux [v]
+	(filter some?
+		(map
+			#(cond
+				(= %1 (symbol ",")) nil
+				(number? %1) %1
+				:else (str %1))
+			v))
+)
+
+(defn extraer-data-aux [linea]
+	(map
+		#(cond
+			(= (first %1) 'DATA) (drop 1 %1)
+			(= (first %1) 'REM) 'REM
+			:else nil)
+		(filter 
+			some? 
+			(map 
+				#(if 
+					(and (list? %1) (or (= (first %1) 'REM) (= (first %1) 'DATA)))
+					%1
+					nil) linea)))
+)
+
+(defn remove-comments-aux [coll]
+	(let [rem-index (first (filter #(> %1 -1) (map-indexed #(if (= %2 'REM) %1 -1) coll)))]
+		(if (some? rem-index)
+			(take rem-index coll)
+			coll
+		)
+	)
+)
+
 (defn extraer-data [prg]
+	(castear-tipo-aux
+		(reduce
+			concat
+			(map #(if (and (some? %1) (not-empty %1)) (nth %1 0) %1) (map remove-comments-aux (map extraer-data-aux prg)))
+		))
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -901,7 +964,11 @@
 ; [((10 (PRINT X))) [10 1] [] [] [] 0 {X$ "HOLA MUNDO"}]
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn ejecutar-asignacion [sentencia amb]
-	;(concat )
+	(let [var-name (nth (take 1 sentencia) 0) expr (drop 2 sentencia)]
+		(let [new-val (calcular-expresion expr amb)]
+			(assoc amb 6 (assoc (nth amb 6) var-name new-val))
+		)
+	)
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -915,7 +982,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn procesar-miembro[d, x]
 	(if 
-		(not (or (operador? x) (palabra-reservada? x)))
+		(and (es-variable? x) (not (or (operador? x) (palabra-reservada? x))))
 		(if 
 			(contains? d x)
 			(get d x)
@@ -927,7 +994,11 @@
 				:else x
 			)
 		)
-		x
+		(if 
+			(= x (symbol "."))
+			0
+			x
+		)
 	)
 )
 
@@ -951,7 +1022,16 @@
 ; user=> (desambiguar (list 'MID$ (symbol "(") 1 (symbol ",") '- 2 '+ 'K (symbol ",") 3 (symbol ")")))
 ; (MID3$ ( 1 , -u 2 + K , 3 ))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; - 2 * (- 3 + 5 - ( + 2 / 7 ) )
+(defn desambiguar-aux [x]
+	(if (list? x)
+		(desambiguar-aux x)
+		(x))
+)
+
 (defn desambiguar [expr]
+	expr;(map desambiguar-aux expr)
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -969,13 +1049,24 @@
 ; 9
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn precedencia [token]
-	;(case token
-	;	'OR 1
-;		'AND 2
-;		'* 6
-		;'-u 7
-		;'MID$ 9
-;	)
+	(cond
+		(= token 'OR) 1
+		(= token 'AND) 2
+		(= token 'NOT) 3
+		(= token '=) 4
+		(= token '<) 4
+		(= token '>) 4
+		(= token '<=) 4
+		(= token '>=) 4
+		(= token '<>) 4
+		(= token '+) 5
+		(= token '-) 5
+		(= token '*) 6
+		(= token '/) 6
+		(= token '-u) 7
+		(= token 'MID$) 9
+		(= token (symbol "^")) 10
+		:else 11)
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -993,6 +1084,12 @@
 ; 3
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn aridad [token]
+	(cond
+		(contains? (set ['ATN, 'INT, 'SIN, 'LEN]) token) 1
+		(contains? (set ['MID$, '*, '-, '+, '/, (symbol "^"), '=, '>=, '<=, '>, '<, '<>, 'AND, 'OR]) token) 2
+		(contains? (set ['MID3$]) token) 3
+		:else 0
+	)
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
