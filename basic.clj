@@ -542,6 +542,10 @@
                           [:sin-errores amb]))
                  (do (dar-error 201 (amb 1)) [nil amb]))  ; Save within program error
         REM [:omitir-restante amb]
+        RESTORE [:sin-errores (assoc amb 5 0)]
+        END (let [nro-linea (first (second amb)) ultima (first (last (first amb)))]
+        		[:omitir-restante (assoc amb 1 [ultima 0])])
+        READ (leer-data (rest sentencia) amb)
         NEW [:sin-errores ['() [:ejecucion-inmediata 0] [] [] [] 0 {}]]  ; [(prog-mem)  [prog-ptrs]  [gosub-return-stack]  [for-next-stack]  [data-mem]  data-ptr  {var-mem}]
         RUN (cond
               (empty? (amb 0)) [:sin-errores amb]  ; no hay programa
@@ -595,8 +599,12 @@
                           (if (or (nil? valor-final) (nil? valor-step))
                               [nil amb]
                               (recur (first separados) (assoc amb 3 (conj (amb 3) [(ffirst separados) valor-final valor-step (amb 1)])))))))
+        LET [:sin-errores (ejecutar-asignacion (rest sentencia) amb)]
+        LIST (do
+        		(mostrar-listado (amb 0))
+        		[:sin-errores amb])
         NEXT (if (<= (count (next sentencia)) 1)
-                 (retornar-al-for amb (fnext sentencia))
+                  (retornar-al-for amb (fnext sentencia))
                   (do (dar-error 16 (amb 1)) [nil amb]))  ; Syntax error
         (if (= (second sentencia) '=)
             (let [resu (ejecutar-asignacion sentencia amb)]
