@@ -790,10 +790,12 @@
 ; ?ERROR DISK FULL IN 100nil
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn dar-error [cod prog-ptrs]
-	;(let [msg (if (number? cod) (buscar-mensaje cod) cod)]
-;		(print msg)
-;		(print)
-;	)
+	(let [msg (if (number? cod) (buscar-mensaje cod) cod) linea (prog-ptrs 0)]
+		(print msg)
+		(if 
+			(not= linea :ejecucion-inmediata)
+			(print (str " IN " linea)
+			nil)))
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
