@@ -226,8 +226,8 @@
                  (flush)
                  (if (= (first (amb 1)) :ejecucion-inmediata)
                      (do (dar-error 100 (amb 1)) [nil amb])  ; Illegal direct error
-                     (let [variables (if es-cadena (nnext param-actualizados) param-actualizados),
-                           valores (butlast (map clojure.string/trim (.split (apply str (.concat (read-line) ",.")) ","))),
+                     (let [variables (if es-cadena (nnext param-actualizados) param-actualizados)
+                           valores (butlast (map clojure.string/trim (.split (apply str (.concat (read-line) ",.")) ",")))
                            entradas (map #(let [entr (try (clojure.edn/read-string %) (catch Exception e (str %)))] (if (number? entr) entr (clojure.string/upper-case (str %)))) valores)]
                            (if (empty? variables)
                                (do (dar-error 16 (amb 1)) [nil amb])  ; Syntax error
@@ -256,10 +256,10 @@
 (defn retornar-al-for [amb var-next]
   (if (empty? (amb 3))
       (do (dar-error 0 (amb 1)) [nil amb])  ; Next without for error
-      (let [datos-for (peek (amb 3)),
-            var-for (nth datos-for 0),
-            valor-final (nth datos-for 1),
-            valor-step (nth datos-for 2),
+      (let [datos-for (peek (amb 3))
+            var-for (nth datos-for 0)
+            valor-final (nth datos-for 1)
+            valor-step (nth datos-for 2)
             origen (nth datos-for 3)]
            (if (and (some? var-next) (not= var-next var-for))
                (retornar-al-for (assoc amb 3 (pop (amb 3))) var-next)
@@ -357,7 +357,7 @@
 ; 7
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn calcular-expresion [expr amb]
-  (calcular-rpn (shunting-yard (desambiguar (preprocesar-expresion expr amb))) (amb 1))
+	(calcular-rpn (shunting-yard (desambiguar (preprocesar-expresion expr amb))) (amb 1))
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -438,7 +438,7 @@
     (let [resu-redu
          (reduce
            (fn [pila token]
-               (let [ari (aridad token),
+               (let [ari (aridad token)
                      resu (eliminar-cero-decimal 
                             (case ari
                               1 (aplicar token (first pila) nro-linea)
@@ -555,9 +555,9 @@
                            (if (= (first (amb 1)) :ejecucion-inmediata)
                                (continuar-programa nuevo-amb)
                                [:omitir-restante nuevo-amb]))))
-        IF (let [separados (split-with #(not (contains? #{"THEN" "GOTO"} (str %))) (next sentencia)),
-                 condicion-de-if (first separados),
-                 resto-if (second separados),
+        IF (let [separados (split-with #(not (contains? #{"THEN" "GOTO"} (str %))) (next sentencia))
+                 condicion-de-if (first separados)
+                 resto-if (second separados)
                  sentencia-de-if (cond
                                    (= (first resto-if) 'GOTO) resto-if
                                    (= (first resto-if) 'THEN) (if (number? (second resto-if))
@@ -569,9 +569,9 @@
                     [:omitir-restante amb]
                     (recur sentencia-de-if amb)))
         INPUT (leer-con-enter (next sentencia) amb)
-        ON (let [separados (split-with #(not (contains? #{"GOTO" "GOSUB"} (str %))) (next sentencia)),
-                 indice-de-on (calcular-expresion (first separados) amb),
-                 sentencia-de-on (first (second separados)),
+        ON (let [separados (split-with #(not (contains? #{"GOTO" "GOSUB"} (str %))) (next sentencia))
+                 indice-de-on (calcular-expresion (first separados) amb)
+                 sentencia-de-on (first (second separados))
                  destino-de-on (seleccionar-destino-de-on (next (second separados)) indice-de-on amb)]
                 (cond
                   (nil? destino-de-on) [nil amb]
@@ -580,7 +580,7 @@
         GOSUB (let [num-linea (if (some? (second sentencia)) (second sentencia) 0)]
                    (if (not (contains? (into (hash-set) (map first (amb 0))) num-linea))
                        (do (dar-error 90 (amb 1)) [nil amb])  ; Undef'd statement error
-                       (let [pos-actual (amb 1),
+                       (let [pos-actual (amb 1)
                              nuevo-amb (assoc (assoc amb 1 [num-linea (contar-sentencias num-linea amb)]) 2 (conj (amb 2) pos-actual))]
                             (if (= (first (amb 1)) :ejecucion-inmediata)
                                 (continuar-programa nuevo-amb)
@@ -590,7 +590,7 @@
                  (if (not (or (and (= (count separados) 3) (variable-float? (ffirst separados)) (= (nth separados 1) '(TO)))
                               (and (= (count separados) 5) (variable-float? (ffirst separados)) (= (nth separados 1) '(TO)) (= (nth separados 3) '(STEP)))))
                      (do (dar-error 16 (amb 1)) [nil amb])  ; Syntax error
-                     (let [valor-final (calcular-expresion (nth separados 2) amb),
+                     (let [valor-final (calcular-expresion (nth separados 2) amb)
                            valor-step (if (= (count separados) 5) (calcular-expresion (nth separados 4) amb) 1)]
                           (if (or (nil? valor-final) (nil? valor-step))
                               [nil amb]
