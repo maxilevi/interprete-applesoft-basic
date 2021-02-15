@@ -963,7 +963,7 @@
 			some? 
 			(map 
 				#(if 
-					(and (list? %1) (or (= (first %1) 'REM) (= (first %1) 'DATA)))
+					(and (seq? %1) (or (= (first %1) 'REM) (= (first %1) 'DATA)))
 					%1
 					nil) linea)))
 )
