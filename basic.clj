@@ -754,19 +754,20 @@
 (defn expandir-nexts [n]
 	(apply concat
 		(map (fn [x] 
-			(if (= (first x) 'NEXT)
-			(filter some?
-				(map 
-					(fn [y]
-						(if 
-							(= y (symbol ","))
-							nil
-							(list 'NEXT y)
-						)
-					) (rest x)
+			(cond
+				(and (= (first x) 'NEXT) (= 1 (count x)))
+				(list '(NEXT))
+
+				(= (first x) 'NEXT)
+				(filter some?
+					(map #(cond 
+							(= %1 (symbol ",")) nil
+							:else (list 'NEXT %1))
+					(rest x))
 				)
-			)
-			(list x)))
+
+				:else
+				(list x)))
 		n)
 	)
 )
