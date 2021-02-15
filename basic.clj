@@ -1058,15 +1058,67 @@
 ; (MID3$ ( 1 , -u 2 + K , 3 ))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; - 2 * (- 3 + 5 - ( + 2 / 7 ) )
-(defn desambiguar-aux [x]
-	(if (list? x)
-		(desambiguar-aux x)
-		(x))
+; Nos dice mirando hacia atras si el operador al que estamos evaluando es unario.
+(defn is-unary-op? [x]
+	(or 
+		(empty? x)
+		(let [l (symbol (str (first x)))]
+			(cond 
+				(= l (symbol ",")) true
+				(= l (symbol "(")) true
+				(= l (symbol ")")) true
+				(operador? l) true
+				:else false
+			)))
+)
+
+(defn get-stack-val [stack state total]
+	(if 
+		(and (not (empty? state)) (= (last state) 'MID$))
+		(conj stack (- total (count state) 1))
+		(conj stack 'd))
+)
+
+(defn set-mid-val [stack state x comma-stack]
+	(if 
+		(= (peek stack) 'd)
+		(conj state x)
+		(let [i (peek stack) c (peek comma-stack)]
+			(conj 
+				(apply list (assoc (vec state) i (if (= c 2) 'MID3$ 'MID$) ))
+				x))
+		)
+)
+
+; IMPORTANTE: Me di cuenta despues de hacer esto que ya existian funciones para desambiguar los mas y menos y los MID$ asi que esto queda obsoleto. 
+; Me dio pena borrarla asi que estoy usando la original del tp y esta la deje aca por las dudas.
+
+
+; En esta funcion coloco algunos comentarios porque me quedo mas complejo de lo que esperaba
+; La idea central de esta funcion es hacer un reduce para ir barriendo la expresion y reemplazar donde sea necesario.
+; Esto funciona bien para las operaciones con las que basta mirar para atras (reemplazar los unarios). Pero se complica
+; con las funciones porque requerimos mirar para adelante. Para resolver esto elegi usar 2 stacks dentro del reduce. El primero mantiene un
+; registro de las aberturas de parentesis para asi detectar cuando estamos cerrando el parecentesis de la funcion. El segundo
+; lleva registro de las commas que encuentra, a nivel parentesis para asi poder deducir de cuantos parametro es nuetra funcion. Cuando cerramos un paren de
+; una funcion MID$ lo que hacemos es reemplazar el MID$ por MID3$ si es necesario (depediendo de cuantas comas tenemos en el stack)
+
+(defn desambiguar-custom [expr]
+	(reverse
+		((reduce
+			#(let [expr-state (%1 0) stack (%1 1) comma-stack (%1 2) x %2]
+				(cond
+					(and (= x '-) (is-unary-op? expr-state)) [(conj expr-state (symbol "-u")) stack comma-stack]
+					(and (= x '+) (is-unary-op? expr-state)) [expr-state stack comma-stack]
+					(and (= x (symbol ",") )) [(conj expr-state x) stack (assoc comma-stack (count comma-stack) (+ (peek comma-stack) 1))]
+					(and (= x (symbol "(") )) [(conj expr-state x) (get-stack-val stack expr-state (count expr)) (conj comma-stack 0)]
+					(and (= x (symbol ")") )) [(set-mid-val stack expr-state x comma-stack) (pop stack) (pop comma-stack)]
+					:else [(conj expr-state x) stack comma-stack]))
+			['() '[] '[]]
+			expr) 0))
 )
 
 (defn desambiguar [expr]
-	expr;(map desambiguar-aux expr)
+	(desambiguar-mid (desambiguar-mas-menos expr))
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
