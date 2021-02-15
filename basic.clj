@@ -923,6 +923,12 @@
 ; [:omitir-restante [((10 (PRINT X)) (15 (GOSUB 100) (X = X + 1)) (20 (NEXT I , J))) [15 1] [] [] [] 0 {}]]
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn continuar-linea [amb]
+	(let [return-stack (amb 2) ptrs (amb 1)]
+		(if 
+			(not (empty? return-stack))
+			(let [return-to ((peek return-stack) 0) statements-left ((peek return-stack) 1)]
+				[:omitir-restante (assoc (assoc amb 2 (pop return-stack)) 1 [return-to (- statements-left 1)])])
+			[(dar-error 22 ptrs) amb]))
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
