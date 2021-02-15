@@ -42,6 +42,9 @@
 	(is (= (expandir-nexts (list '(PRINT 1)(list (quote NEXT) (quote A)))) 
 		'((PRINT 1) (NEXT A)))
 	)
+	(is (= (expandir-nexts (list '(PRINT 1)(list (quote NEXT))))
+		'((PRINT 1) (NEXT)))
+	)
 )
 
 (deftest test-operador?
@@ -72,8 +75,12 @@
 )
 
 (deftest test-preprocesar-expresion
-	(is (= (preprocesar-expresion '(X$ + " MUNDO" + Z$) ['((10 (PRINT X))) [10 1] [] [] [] 0 '{X$ "HOLA"}]) '("HOLA" + " MUNDO" + "")))
-	(is (= (preprocesar-expresion '(X + . / Y% * Z) ['((10 (PRINT X))) [10 1] [] [] [] 0 '{X 5 Y% 2}]) '(5 + 0 / 2 * 0)))
+	(is (= 
+		(preprocesar-expresion '(X$ + " MUNDO" + Z$) ['((10 (PRINT X))) [10 1] [] [] [] 0 '{X$ "HOLA"}])
+		'("HOLA" + " MUNDO" + "")))
+	(is (= 
+		(preprocesar-expresion '(X + . / Y% * Z) ['((10 (PRINT X))) [10 1] [] [] [] 0 '{X 5 Y% 2}])
+		'(5 + 0 / 2 * 0)))
 )
 
 (deftest test-anular-invalidos
@@ -177,16 +184,16 @@
 (deftest test-desambiguar
 	(is (=
 		(desambiguar (list '- 2 '* (symbol "(") '- 3 '+ 5 '- (symbol "(") '+ 2 '/ 7 (symbol ")") (symbol ")")))
-		'(-u 2 * ( -u 3 + 5 - ( 2 / 7 ) ))))
+		(list '-u 2 '* (symbol "(") '-u 3 '+ 5 '- (symbol "(") '2 '/ 7 (symbol ")") (symbol ")"))))
 	(is (=
 		(desambiguar (list 'MID$ (symbol "(") 1 (symbol ",") 2 (symbol ")")))
-		'(MID$ ( 1 , 2 ))))
+		(list 'MID$ (symbol "(") 1 (symbol ",") 2 (symbol ")"))))
 	(is (=
 		(desambiguar (list 'MID$ (symbol "(") 1 (symbol ",") 2 (symbol ",") 3 (symbol ")")))
-		'(MID3$ ( 1 , 2 , 3 ))))
+		(list 'MID3$ (symbol "(") 1 (symbol ",") 2 (symbol ",") 3 (symbol ")"))))
 	(is (=
 		(desambiguar (list 'MID$ (symbol "(") 1 (symbol ",") '- 2 '+ 'K (symbol ",") 3 (symbol ")")))
-		'(MID3$ ( 1 , -u 2 + K , 3 ))))
+		(list 'MID3$ (symbol "(") 1 (symbol ",") '-u 2 '+ 'K (symbol ",") 3 (symbol ")"))))
 )
 
 (deftest test-precedencia
@@ -277,11 +284,11 @@
 	(with-out-str 
 		(is (=
 			(continuar-linea [(list '(10 (PRINT X)) '(15 (X = X + 1)) (list 20 (list 'NEXT 'I (symbol ",") 'J))) [20 3] [] [] [] 0 {}])
-			'[nil [((10 (PRINT X)) (15 (X = X + 1)) (20 (NEXT I , J))) [20 3] [] [] [] 0 {}]]))
+			[nil [(list '(10 (PRINT X)) '(15 (X = X + 1)) (list 20 (list 'NEXT 'I (symbol ",") 'J))) [20 3] [] [] [] 0 {}]]))
 		"?RETURN WITHOUT GOSUB ERROR IN 20")
 	(is (=
 		(continuar-linea [(list '(10 (PRINT X)) '(15 (GOSUB 100) (X = X + 1)) (list 20 (list 'NEXT 'I (symbol ",") 'J))) [20 3] [[15 2]] [] [] 0 {}])
-		'[:omitir-restante [((10 (PRINT X)) (15 (GOSUB 100) (X = X + 1)) (20 (NEXT I , J))) [15 1] [] [] [] 0 {}]]))
+		[:omitir-restante [(list '(10 (PRINT X)) '(15 (GOSUB 100) (X = X + 1)) (list 20 (list 'NEXT 'I (symbol ",") 'J))) [15 1] [] [] [] 0 {}]]))
 )
 
 (run-tests)
