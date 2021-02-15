@@ -1,6 +1,6 @@
 (require '[clojure.test :refer [is deftest run-tests]])
 
-(load-file "basic.clj")
+(load-file "../src/basic.clj")
 
 (deftest test-variable-float?
 	(is (= (variable-float? 'X%) false))
