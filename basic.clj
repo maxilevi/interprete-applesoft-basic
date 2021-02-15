@@ -807,7 +807,11 @@
 ; false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn es-variable? [x]
-	(some? (re-matches #"^[A-Za-z]+[$|%]*$" (str x)))
+	(and 
+		(not (string? x))
+		(not (palabra-reservada? x))
+		(not (operador? x))
+		(some? (re-matches #"^[A-Za-z]+[$|%]*$" (str x))))
 )
 
 (defn variable-float? [x]
